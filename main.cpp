@@ -17,7 +17,7 @@ static DigitalOut shutdown_pin(PC_6);
 static VL53L0X range(&devI2c, &shutdown_pin, PC_7, 0x52);
 
 
-// functions to print sensor data
+// functions to print sensor data..
 void print_t_rh(){
     float value1, value2;
     hum_temp.get_temperature(&value1);
