@@ -1,4 +1,3 @@
-
 /* Includes */
 #include "mbed.h"
 #include "HTS221Sensor.h"
@@ -16,6 +15,19 @@ static LIS3MDL magnetometer(&devI2c, 0x3C);
 static DigitalOut shutdown_pin(PC_6);
 static VL53L0X range(&devI2c, &shutdown_pin, PC_7, 0x52);
 
+// Serial object for USB communication
+static UnbufferedSerial pc(USBTX, USBRX);
+
+// buffer and flags for serial interrupt
+volatile bool data_ready = false;
+char recv_char;
+
+// Interrupt service routine for serial reception
+void serial_isr() {
+    if (pc.read(&recv_char, 1)) {
+        data_ready = true;
+    }
+}
 
 // functions to print sensor data..
 void print_t_rh(){
@@ -33,7 +45,6 @@ void print_mag(){
     int32_t axes[3];
     magnetometer.get_m_axes(axes);
     printf("LIS3MDL [mag/mgauss]:    %6ld, %6ld, %6ld\r\n", axes[0], axes[1], axes[2]);
-
 }
 
 void print_accel(){
@@ -66,11 +77,9 @@ int main() {
     int32_t axes[3];
 
     hum_temp.init(NULL);
-
     press_temp.init(NULL);
     magnetometer.init(NULL);
     acc_gyro.init(NULL);
-
     range.init_sensor(0x52);
 
     hum_temp.enable();
@@ -79,6 +88,9 @@ int main() {
     acc_gyro.enable_x();
     acc_gyro.enable_g();
   
+    // setup serial interrupt
+    pc.attach(&serial_isr, UnbufferedSerial::RxIrq);
+
     printf("\033[2J\033[20A");
     printf ("\r\n--- Starting new run ---\r\n\r\n");
 
@@ -101,6 +113,19 @@ int main() {
     printf("\r\n");
     
     while(1) {
+        if (data_ready) {
+            data_ready = false;
+            // Perform action based on received character, e.g., print all sensor data
+            if (recv_char == 'r') {
+                printf("\n\r--- Reading sensor values ---\n\r");
+                print_t_rh();
+                print_mag();
+                print_accel();
+                print_gyro();
+                print_distance();
+                printf("\r\n");
+            }
+        }
         wait_us(500000);
     }
 }
