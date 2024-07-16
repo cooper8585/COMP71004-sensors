@@ -15,14 +15,14 @@ static LIS3MDL magnetometer(&devI2c, 0x3C);
 static DigitalOut shutdown_pin(PC_6);
 static VL53L0X range(&devI2c, &shutdown_pin, PC_7, 0x52);
 
-// Serial object for USB communication
+// Serial 
 static UnbufferedSerial pc(USBTX, USBRX);
 
 // buffer and flags for serial interrupt
 volatile bool data_ready = false;
 char recv_char;
 
-// Interrupt service routine for serial reception
+// Interrupt
 void serial_isr() {
     if (pc.read(&recv_char, 1)) {
         data_ready = true;
@@ -35,7 +35,7 @@ void print_t_rh(){
     hum_temp.get_temperature(&value1);
     hum_temp.get_humidity(&value2);
 
-    value1=value2=0;    
+    value1 = value2 = 0;    
     press_temp.get_temperature(&value1);
     press_temp.get_pressure(&value2);
     printf("LPS22HB: [temp] %.2f C, [press] %.2f mbar\r\n", value1, value2);
@@ -92,7 +92,7 @@ int main() {
     pc.attach(&serial_isr, UnbufferedSerial::RxIrq);
 
     printf("\033[2J\033[20A");
-    printf ("\r\n--- Starting new run ---\r\n\r\n");
+    printf ("\r\n--- Ready to roll out! ---\r\n\r\n");
 
     hum_temp.read_id(&id);
     printf("HTS221  humidity & temperature    = 0x%X\r\n", id);
@@ -104,28 +104,33 @@ int main() {
     acc_gyro.read_id(&id);
     printf("LSM6DSL accelerometer & gyroscope = 0x%X\r\n", id);
     
-    printf("\n\r--- Reading sensor values ---\n\r"); ;
-    print_t_rh();
-    print_mag();
-    print_accel();
-    print_gyro();
-    print_distance();
-    printf("\r\n");
-    
+    printf("\n\r--- Press the button to display parameters ---\n\r");
+
     while(1) {
         if (data_ready) {
             data_ready = false;
-            // Perform action based on received character, e.g., print all sensor data
-            if (recv_char == 'r') {
-                printf("\n\r--- Reading sensor values ---\n\r");
-                print_t_rh();
-                print_mag();
-                print_accel();
-                print_gyro();
-                print_distance();
-                printf("\r\n");
+            // adding keys to use (a, s, d, f, g,)
+            switch (recv_char) {
+                case 'a':
+                    print_accel();
+                    break;
+                case 's':
+                    print_gyro();
+                    break;
+                case 'd':
+                    print_mag();
+                    break;
+                case 'f':
+                    print_t_rh();
+                    break;
+                case 'g':
+                    print_distance();
+                    break;
+                default:
+                    printf("Unassigned button!!!! Try a, s, d, f or g\r\n");
+                    break;
             }
         }
-        wait_us(500000);
+        wait_us(100000);
     }
 }
